@@ -1,153 +1,229 @@
 import processing.core.PApplet;
+import processing.core.PConstants;
+import processing.core.PVector;
 
 import java.util.ArrayList;
 import java.util.Random;
 
 public class GridLocal {
-    PApplet p;
+    final PApplet p;
 
-    boolean[][] grid = new boolean[14][14];
+    final PVector pos;
+    final int m = 10, n = 10;
+    final float w;
 
-    Random rand = new Random();
+    final float size;
 
-    GridLocal(PApplet p)
+    boolean[][] grid = new boolean[m][n];
+    ArrayList<Ship> ships = new ArrayList<>();
+
+    static Random rand = new Random();
+
+    PVector beginDragPos = new PVector();
+    PVector endDragPos = new PVector();
+    Ship draggedShip;
+
+    GridLocal(PApplet p, PVector pos, float size)
     {
         this.p = p;
+        this.pos = pos;
 
-        for (int i = 0; i < 14; i++) {
-            grid[i][0] = true;
-            grid[i][13] = true;
-        }
-        for (int j = 0; j < 14; j++) {
-            grid[13][j] = true;
-            grid[0][j] = true;
-        }
+        this.size = size;
+        this.w = size / m;
 
-        // printGrid();
+        clearGrid();
 
-        int number = 4;
-        for (ShipType type : ShipType.values())
+        int numberToSpawn = 4;
+
+        for (Ship.Type type : Ship.Type.values())
         {
-            for (int n = 0; n < number; n++)
+            for (int i = 0; i < numberToSpawn; i++)
             {
                 Ship ship;
                 do {
-                    ship = new Ship(p, type);
+                    PVector newPos = new PVector(rand.nextInt(m), rand.nextInt(n));
+//                    PVector newPos = new PVector(0, 0);
+                    Ship.Orientation newOrientation = rand.nextBoolean() ? Ship.Orientation.H : Ship.Orientation.V;
+
+                    ship = new Ship(p, type, newPos, newOrientation);
                     // System.out.println("BUG");
                 }
-                while (!isShipValid(ship));
+                while (!validShip(ship));
 
-                placeShip(ship, true);
+                addShip(ship);
+                // updateGrid();
             }
 
-            number--;
+            numberToSpawn--;
         }
-
     }
 
-    boolean isShipValid(Ship ship)
+    void addShip(Ship ship)
     {
-        try {
-            if (ship.orientation == ShipOrientation.H) {
-                // Extremities
-                if (grid[ship.x - 1][ship.y] || grid[ship.x + ship.size][ship.y])
-                    return false;
+        ships.add(ship);
 
-                // Edges
-                for (int i = 0; i < ship.size; i++) {
-                    for (int vOffset = -1; vOffset <= 1; vOffset++) {
-                        if (grid[ship.x + i][ship.y + vOffset]) {
-                            return false;
-                        }
-                    }
-                }
-            } else if (ship.orientation == ShipOrientation.V) {
-                // Extremities
-                if (grid[ship.x][ship.y - 1] || grid[ship.x][ship.y + ship.size])
-                    return false;
+        for (PVector pos : ship.getPos())
+            grid[(int) pos.x][(int) pos.y] = true;
 
-                // Edges
-                for (int i = 0; i < ship.size; i++) {
-                    for (int hOffset = -1; hOffset <= 1; hOffset++) {
-                        if (grid[ship.x + hOffset][ship.y + i]) {
-                            return false;
-                        }
-                    }
-                }
-            }
+        // Debugging
+        // printGrid();
+    }
+
+    void removeShip(Ship ship)
+    {
+        ships.remove(ship);
+
+        for (PVector pos : ship.getPos())
+            grid[(int) pos.x][(int) pos.y] = false;
+
+        // Debugging
+        // printGrid();
+    }
+
+    Ship getShipAt(PVector targetPos)
+    {
+        for (Ship ship : ships)
+            for (PVector shipPos : ship.getPos())
+                if (targetPos.x == shipPos.x && targetPos.y == shipPos.y)
+                    return ship;
+        return null;
+    }
+
+    boolean validPos(PVector pos)
+    {
+        if (pos.x >= 0 && pos.x < m && pos.y >= 0 && pos.y < n)
             return true;
-        } catch (Exception e) {
-            return false;
-        }
-
+        return false;
     }
 
-    void placeShip(Ship ship, boolean state)
+    boolean validShip(Ship ship)
     {
-        if (ship.orientation == ShipOrientation.H)
-        {
-            for (int i = 0; i < ship.size; i++)
-            {
-                grid[ship.x + i][ship.y] = state;
-            }
-        }
+        for (PVector bodyPos : ship.getPos())
+            if (!validPos(bodyPos))
+                return false;
 
-        if (ship.orientation == ShipOrientation.V)
-        {
-            for (int j = 0; j < ship.size; j++)
-            {
-                grid[ship.x][ship.y + j] = state;
-            }
-        }
+        ArrayList<PVector> verifPos = new ArrayList<>();
+        verifPos.addAll(ship.getPos());
+        verifPos.addAll(ship.getNeighboursPos());
+        for (PVector pos : verifPos)
+            if (validPos(pos))
+                if (grid[(int) pos.x][(int) pos.y] == true)
+                    return false;
+
+        return true;
     }
 
-    void show()
+    void clearGrid()
     {
-        float w = p.width / 10;
-//        p.color g = new Color(84, 255, 94);
-//        Color r = new Color(255, 86, 94);
-
-        p.strokeWeight(5);
-        for (int i = 2; i < 12; i++)
-        {
-            for (int j = 2; j < 12; j++)
-            {
-                p.fill(grid[i][j] ? 200 : 100);
-
-                p.rect((i-2)*w, (j-2)*w, w, w);
-            }
-        }
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                grid[i][j] = false;
     }
 
-    static ArrayList<PVector> neighbours = new ArrayList<>();
-    static ShipOrientation selectedOrientation;
-
-    void moveShip(int i, int j)
+    void updateGrid()
     {
-        if (grid[i][j]) {
+        clearGrid();
 
-        }
+        for (Ship ship : ships)
+            for (PVector pos : ship.getPos())
+                grid[(int) pos.x][(int) pos.y] = true;
     }
 
     void printGrid()
     {
-        for (int i = 0; i < 14; i++) {
-            for (int j = 0; j < 14; j++)
+        System.out.println("---------------------");
+        for (int i = 0; i < m; i++)
+        {
+            for (int j = 0; j < n; j++)
                 System.out.print(grid[i][j] ? " ■" : "  ");
 
             System.out.println();
         }
+        System.out.println("---------------------");
     }
-}
 
-class PVector
-{
-    float x;
-    float y;
+    void show() {
+        p.strokeWeight(5);
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++) {
+                p.fill(grid[i][j] ? 200 : 100);
+                p.rect(pos.x + j * w, pos.y + i * w, w, w);
+            }
+    }
 
-    PVector(float x, float y)
+    PVector getMousePos()
     {
-        this.x = x;
-        this.y = y;
+        PVector mousePos = new PVector(p.mouseY, p.mouseX);
+        System.out.println("mousePos : " + mousePos);
+
+
+        if (p.mouseX < pos.x || p.mouseX >= pos.x + size || p.mouseY < pos.y || p.mouseY >= pos.y + size)
+            return null;
+
+        PVector relPos = new PVector();
+        PVector recalcPos = new PVector(pos.y, pos.x);
+        System.out.println("pos : " + pos);
+
+        PVector.sub(mousePos, recalcPos, relPos);
+        System.out.println("relPos(after) : " + relPos);
+
+
+        return new PVector((int)(relPos.x / w), (int)(relPos.y / w));
+    }
+
+    void mousePressed()
+    {
+        if (p.mouseButton == PConstants.LEFT)
+        {
+//            beginDragPos = new PVector(p.mouseY / w, p.mouseX / w);
+            beginDragPos = getMousePos();
+            if (beginDragPos == null)
+                return;
+
+            System.out.println(beginDragPos);
+
+            draggedShip = getShipAt(beginDragPos);
+        }
+    }
+
+    void mouseDragged()
+    {
+        if (draggedShip != null)
+        {
+//            PVector currentMousePos = new PVector(p.mouseY / w, p.mouseX / w);
+            PVector currentMousePos = getMousePos();
+            if (currentMousePos == null)
+                return;
+//            System.out.println(currentMousePos);
+
+
+            PVector dragVector = new PVector();
+            PVector.sub(currentMousePos, beginDragPos, dragVector);
+
+            endDragPos = new PVector();
+            PVector.add(draggedShip.pos, dragVector, endDragPos);
+
+            // Small bug on dragging 2 size vertical ship downwards
+//            if (beginDragPos.x == endDragPos.x && beginDragPos.y == endDragPos.y)
+//                return;
+
+            Ship destShip = new Ship(p, draggedShip.type, endDragPos, draggedShip.orientation);
+
+            removeShip(draggedShip);
+
+            if (validShip(destShip))
+            {
+                draggedShip = destShip;
+                System.out.println("VALID");
+                beginDragPos.set(currentMousePos.x, currentMousePos.y);
+            }
+
+            addShip(draggedShip);
+        }
+    }
+
+    void mouseReleased()
+    {
+        draggedShip = null;
     }
 }

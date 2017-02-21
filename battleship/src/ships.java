@@ -1,33 +1,35 @@
 import processing.core.PApplet;
+import processing.core.PVector;
 
 import java.util.ArrayList;
 import java.util.Random;
 
-enum ShipType
-{
-    SUBMARINE,
-    DESTROYER,
-    CRUISER,
-    BATTLESHIP
-//    CARRIER;
-};
 
-enum ShipOrientation
-{
-    H,
-    V
-}
+class Ship {
+    enum Type
+    {
+        SUBMARINE,
+        DESTROYER,
+        CRUISER,
+        BATTLESHIP
+    }
 
-class Ship implements IShip
-{
-    PApplet p;
-    Random rand = new Random();
+    enum Orientation
+    {
+        H,
+        V
+    }
 
-    int x, y;
+    final PApplet p;
+
+    static Random rand = new Random();
+
+    Type type;
+    PVector pos;
     int size;
-    ShipOrientation orientation;
+    Orientation orientation;
 
-    Ship(PApplet p, ShipType type)
+    Ship(PApplet p, Type type, PVector pos, Orientation orientation)
     {
         this.p = p;
 
@@ -43,30 +45,69 @@ class Ship implements IShip
                 size = 4; break;
         }
 
-        pickRandomLocation();
-        System.out.println(x + " " + y);
-        orientation = rand.nextBoolean() ? ShipOrientation.H : ShipOrientation.V;
-    }
-
-    Ship(PApplet p, ArrayList<PVector> coords, ShipOrientation orientation)
-    {
-        this.p = p;
-
-        size = 0;
-
-        x = (int)coords.get(0).x;
-        y = (int)coords.get(0).y;
+        this.type = type;
+        this.pos = pos;
         this.orientation = orientation;
     }
 
-    void pickRandomLocation()
+    ArrayList<PVector> getPos()
     {
-        x = rand.nextInt(10) + 2;
-        y = rand.nextInt(10) + 2;
+        ArrayList<PVector> list = new ArrayList<>();
+
+        if (orientation == Orientation.V)
+            for (int i = (int) pos.x; i < pos.x + size; i++)
+                list.add(new PVector(i, pos.y));
+
+        else if (orientation == Orientation.H)
+            for (int j = (int) pos.y; j < pos.y + size; j++)
+                list.add(new PVector(pos.x, j));
+
+        return list;
     }
 
-    @Override
-    public void show() {
+    ArrayList<PVector> getNeighboursPos()
+    {
+        ArrayList<PVector> list = new ArrayList<>();
 
+
+        if (orientation == Orientation.V)
+        {
+//            // Extremities
+//            list.add(new PVector(pos.x-1, pos.y));
+//            list.add(new PVector(pos.x + size, pos.y));
+
+            for (int i = (int) pos.x-1; i < pos.x+1 + size; i++)
+            {
+//                list.add(new PVector(i, pos.y-1));
+//                list.add(new PVector(i, pos.y+1));
+                for(int j = (int) (pos.y-1); j <= pos.y+1; j++)
+                {
+                    if (i == pos.x && j == pos.y)
+                        continue;
+                    list.add(new PVector(i, j));
+                }
+            }
+        }
+
+        else if (orientation == Orientation.H)
+        {
+//            // Extremities
+//            list.add(new PVector(pos.x, pos.y-1));
+//            list.add(new PVector(pos.x, pos.y + size));
+
+            for (int j = (int) pos.y-1; j < pos.y+1 + size; j++)
+            {
+//                list.add(new PVector(pos.x-1, j));
+//                list.add(new PVector(pos.x+1, j));
+                for(int i = (int) (pos.x-1); i <= pos.x+1; i++)
+                {
+                    if (i == pos.x && j == pos.y)
+                        continue;
+                    list.add(new PVector(i, j));
+                }
+            }
+        }
+
+        return list;
     }
 }
