@@ -3,21 +3,12 @@ import processing.core.PConstants;
 import processing.core.PVector;
 
 import java.util.ArrayList;
-import java.util.Random;
 
-public class GridLocal {
-    final PApplet p;
+public class GridLocal extends Grid {
 
-    final PVector pos;
-    final int m = 10, n = 10;
-    final float w;
+    boolean frozen = false;
 
-    final float size;
-
-    Cell[][] grid = new Cell[m][n];
     ArrayList<Ship> ships = new ArrayList<>();
-
-    static Random rand = new Random();
 
     PVector beginDragPos = new PVector();
     PVector endDragPos = new PVector();
@@ -25,13 +16,7 @@ public class GridLocal {
 
     GridLocal(PApplet p, PVector pos, float size)
     {
-        this.p = p;
-        this.pos = pos;
-
-        this.size = size;
-        this.w = size / m;
-
-        clearGrid();
+        super(p, pos, size);
 
         int numberToSpawn = 4;
 
@@ -42,11 +27,9 @@ public class GridLocal {
                 Ship ship;
                 do {
                     PVector newPos = new PVector(rand.nextInt(m), rand.nextInt(n));
-//                    PVector newPos = new PVector(0, 0);
                     Ship.Orientation newOrientation = rand.nextBoolean() ? Ship.Orientation.H : Ship.Orientation.V;
 
                     ship = new Ship(p, type, newPos, newOrientation);
-                    // System.out.println("BUG");
                 }
                 while (!validShip(ship));
 
@@ -62,22 +45,23 @@ public class GridLocal {
     {
         ships.add(ship);
 
-        for (PVector pos : ship.getPos())
-            grid[(int) pos.x][(int) pos.y] = true;
+        for (Cell cell : ship.getCells())
+            addCell(cell);
 
         // Debugging
-        // printGrid();
+        printGrid();
     }
 
     void removeShip(Ship ship)
     {
         ships.remove(ship);
 
-        for (PVector pos : ship.getPos())
-            grid[(int) pos.x][(int) pos.y] = false;
+        for (Cell cell : ship.getCells())
+            // Clone the position but change the type
+            addCell(new Cell(p, Cell.Type.UNDISCOVERED, new PVector(cell.pos.x, cell.pos.y)));
 
         // Debugging
-        // printGrid();
+        printGrid();
     }
 
     Ship getShipAt(PVector targetPos)
@@ -87,13 +71,6 @@ public class GridLocal {
                 if (targetPos.x == shipPos.x && targetPos.y == shipPos.y)
                     return ship;
         return null;
-    }
-
-    boolean validPos(PVector pos)
-    {
-        if (pos.x >= 0 && pos.x < m && pos.y >= 0 && pos.y < n)
-            return true;
-        return false;
     }
 
     boolean validShip(Ship ship)
@@ -107,17 +84,10 @@ public class GridLocal {
         verifPos.addAll(ship.getNeighboursPos());
         for (PVector pos : verifPos)
             if (validPos(pos))
-                if (grid[(int) pos.x][(int) pos.y] == true)
+                if (grid[(int) pos.x][(int) pos.y].type == Cell.Type.SHIP_BLOCK)
                     return false;
 
         return true;
-    }
-
-    void clearGrid()
-    {
-        for (int i = 0; i < m; i++)
-            for (int j = 0; j < n; j++)
-                grid[i][j] = new Cell(p, Cell.Type.UNDISCOVERED);
     }
 
     void updateGrid()
@@ -125,58 +95,43 @@ public class GridLocal {
         clearGrid();
 
         for (Ship ship : ships)
-            for (PVector pos : ship.getPos())
-                grid[(int) pos.x][(int) pos.y] = true;
+            for (Cell cell : ship.getCells())
+                addCell(cell);
     }
 
-    void printGrid()
+    void freeze()
     {
-        System.out.println("---------------------");
-        for (int i = 0; i < m; i++)
+        frozen = true;
+    }
+
+    boolean hit(PVector pos)
+    {
+        Cell hitCell = grid[(int) pos.x][(int) pos.y];
+        if (hitCell.type == Cell.Type.SHIP_BLOCK)
         {
-            for (int j = 0; j < n; j++)
-                System.out.print(grid[i][j] ? " ■" : "  ");
-
-            System.out.println();
+            hitCell.type = Cell.Type.SHIP_BLOCK_HIT;
+            return true;
         }
-        System.out.println("---------------------");
+        else
+        {
+            // Blank cell
+            hitCell.type = Cell.Type.EMPTY_BLOCK_HIT;
+            return false;
+        }
     }
 
-    void show() {
-        p.strokeWeight(5);
-        for (int i = 0; i < m; i++)
-            for (int j = 0; j < n; j++) {
-                p.fill(grid[i][j] ? 200 : 100);
-                p.rect(pos.x + j * w, pos.y + i * w, w, w);
-            }
-    }
-
-    PVector getMousePos()
-    {
-        PVector mousePos = new PVector(p.mouseY, p.mouseX);
-        System.out.println("mousePos : " + mousePos);
-
-
-        if (p.mouseX < pos.x || p.mouseX >= pos.x + size || p.mouseY < pos.y || p.mouseY >= pos.y + size)
-            return null;
-
-        PVector relPos = new PVector();
-        PVector recalcPos = new PVector(pos.y, pos.x);
-        System.out.println("pos : " + pos);
-
-        PVector.sub(mousePos, recalcPos, relPos);
-        System.out.println("relPos(after) : " + relPos);
-
-
-        return new PVector((int)(relPos.x / w), (int)(relPos.y / w));
-    }
+    //
+    // Handling mouse events
+    //
 
     void mousePressed()
     {
+        if (frozen)
+            return;
+
         if (p.mouseButton == PConstants.LEFT)
         {
-//            beginDragPos = new PVector(p.mouseY / w, p.mouseX / w);
-            beginDragPos = getMousePos();
+            beginDragPos = getMouseGridPos();
             if (beginDragPos == null)
                 return;
 
@@ -188,14 +143,14 @@ public class GridLocal {
 
     void mouseDragged()
     {
+        if (frozen)
+            return;
+
         if (draggedShip != null)
         {
-//            PVector currentMousePos = new PVector(p.mouseY / w, p.mouseX / w);
-            PVector currentMousePos = getMousePos();
+            PVector currentMousePos = getMouseGridPos();
             if (currentMousePos == null)
                 return;
-//            System.out.println(currentMousePos);
-
 
             PVector dragVector = new PVector();
             PVector.sub(currentMousePos, beginDragPos, dragVector);
@@ -203,7 +158,7 @@ public class GridLocal {
             endDragPos = new PVector();
             PVector.add(draggedShip.pos, dragVector, endDragPos);
 
-            // Small bug on dragging 2 size vertical ship downwards
+            // Small bug on dragging 2 length vertical ship downwards
 //            if (beginDragPos.x == endDragPos.x && beginDragPos.y == endDragPos.y)
 //                return;
 
@@ -224,6 +179,9 @@ public class GridLocal {
 
     void mouseReleased()
     {
+        if (frozen)
+            return;
+
         draggedShip = null;
     }
 }

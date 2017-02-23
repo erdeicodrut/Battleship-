@@ -1,7 +1,6 @@
 import processing.core.PApplet;
 import processing.core.PVector;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -27,7 +26,7 @@ class Ship {
 
     Type type;
     PVector pos;
-    int size;
+    int length;
     Orientation orientation;
     ArrayList<Cell> cells = new ArrayList<>();
 
@@ -39,13 +38,13 @@ class Ship {
         switch (type)
         {
             case SUBMARINE:
-                size = 1; break;
+                length = 1; break;
             case DESTROYER:
-                size = 2; break;
+                length = 2; break;
             case CRUISER:
-                size = 3; break;
+                length = 3; break;
             case BATTLESHIP:
-                size = 4; break;
+                length = 4; break;
         }
 
         this.type = type;
@@ -53,9 +52,7 @@ class Ship {
         this.orientation = orientation;
 
         for (PVector cellPos : getPos())
-        {
             cells.add(new Cell(p, Cell.Type.SHIP_BLOCK, cellPos));
-        }
     }
 
     ArrayList<PVector> getPos()
@@ -63,57 +60,43 @@ class Ship {
         ArrayList<PVector> list = new ArrayList<>();
 
         if (orientation == Orientation.V)
-            for (int i = (int) pos.x; i < pos.x + size; i++)
+            for (int i = (int) pos.x; i < pos.x + length; i++)
                 list.add(new PVector(i, pos.y));
 
         else if (orientation == Orientation.H)
-            for (int j = (int) pos.y; j < pos.y + size; j++)
+            for (int j = (int) pos.y; j < pos.y + length; j++)
                 list.add(new PVector(pos.x, j));
 
         return list;
+    }
+
+    ArrayList<Cell> getCells()
+    {
+        return cells;
     }
 
     ArrayList<PVector> getNeighboursPos()
     {
         ArrayList<PVector> list = new ArrayList<>();
 
-
         if (orientation == Orientation.V)
         {
-//            // Extremities
-//            list.add(new PVector(pos.x-1, pos.y));
-//            list.add(new PVector(pos.x + size, pos.y));
-
-            for (int i = (int) pos.x-1; i < pos.x+1 + size; i++)
-            {
-//                list.add(new PVector(i, pos.y-1));
-//                list.add(new PVector(i, pos.y+1));
-                for(int j = (int) (pos.y-1); j <= pos.y+1; j++)
-                {
+            for (int i = (int) pos.x-1; i < pos.x+1 + length; i++)
+                for (int j = (int) (pos.y - 1); j <= pos.y + 1; j++) {
                     if (i == pos.x && j == pos.y)
                         continue;
                     list.add(new PVector(i, j));
                 }
-            }
         }
 
         else if (orientation == Orientation.H)
         {
-//            // Extremities
-//            list.add(new PVector(pos.x, pos.y-1));
-//            list.add(new PVector(pos.x, pos.y + size));
-
-            for (int j = (int) pos.y-1; j < pos.y+1 + size; j++)
-            {
-//                list.add(new PVector(pos.x-1, j));
-//                list.add(new PVector(pos.x+1, j));
-                for(int i = (int) (pos.x-1); i <= pos.x+1; i++)
-                {
+            for (int j = (int) pos.y-1; j < pos.y+1 + length; j++)
+                for (int i = (int) (pos.x - 1); i <= pos.x + 1; i++) {
                     if (i == pos.x && j == pos.y)
                         continue;
                     list.add(new PVector(i, j));
                 }
-            }
         }
 
         return list;
