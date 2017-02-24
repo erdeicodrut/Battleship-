@@ -3,32 +3,33 @@ import processing.core.PVector;
 
 import java.util.Random;
 
-/**
- * Created by roscale on 2/23/17.
- */
 public class Grid {
 
-    static Random rand = new Random();
     final PApplet p;
+    static Random rand = new Random();
+
     final PVector pos;
     final int m = 10;
     final int n = 10;
-    final float size;
-    final float cellSize;
     Cell[][] grid = new Cell[m][n];
 
-    public Grid(PApplet p, PVector pos, float size) {
+    final float pxSize;
+    final float cellSize;
+
+    public Grid(PApplet p, PVector pos, float pxSize) {
         this.p = p;
-        this.size = size;
-        this.cellSize = this.size / m;
+        this.pxSize = pxSize;
+        this.cellSize = this.pxSize / m;
         this.pos = pos;
 
         clearGrid();
     }
 
-    void addCell(Cell cell)
+    void clearGrid()
     {
-        grid[(int) cell.pos.x][(int) cell.pos.y] = cell;
+        for (int i = 0; i < m; i++)
+            for (int j = 0; j < n; j++)
+                grid[i][j] = new Cell(p, Cell.Type.UNDISCOVERED, new PVector(i, j));
     }
 
     boolean validPos(PVector pos)
@@ -38,11 +39,9 @@ public class Grid {
         return false;
     }
 
-    void clearGrid()
+    void addCell(Cell cell)
     {
-        for (int i = 0; i < m; i++)
-            for (int j = 0; j < n; j++)
-                grid[i][j] = new Cell(p, Cell.Type.UNDISCOVERED, new PVector(i, j));
+        grid[(int) cell.gridPos.x][(int) cell.gridPos.y] = cell;
     }
 
     void printGrid()
@@ -63,23 +62,47 @@ public class Grid {
         p.strokeWeight(5);
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++)
-                grid[i][j].show(pos, cellSize);
+                showCell(grid[i][j]);
     }
 
+    void showCell(Cell cell)
+    {
+        int color = 0;
+        switch (cell.type)
+        {
+            case SHIP_BLOCK:
+                color = 0x888888; break;
+            case UNDISCOVERED:
+                color = 0x555555; break;
+            case SHIP_BLOCK_HIT:
+                color = 0xFF0000; break;
+            case EMPTY_BLOCK_HIT:
+                color = 0xFFFFFF;
+            case UNCLICKABLE:
+                // TODO: Implement visual representation of remaining cells
+                break;
+        }
+
+        int r = (color & 0xFF0000) >> 16;
+        int g = (color & 0x00FF00) >> 8;
+        int b = color & 0x0000FF;
+
+        p.fill(r, g, b);
+        p.rect(pos.x + cell.gridPos.y * cellSize, pos.y + cell.gridPos.x * cellSize, cellSize, cellSize);
+    }
+
+    // Returns null if not clicked on the grid
     PVector getMouseGridPos()
     {
-        PVector mousePos = new PVector(p.mouseY, p.mouseX);
-        // System.out.println("mousePos : " + mousePos);
+        PVector mouseGridPos = new PVector(p.mouseY, p.mouseX);
 
-        if (p.mouseX < pos.x || p.mouseX >= pos.x + size || p.mouseY < pos.y || p.mouseY >= pos.y + size)
+        if (p.mouseX < pos.x || p.mouseX >= pos.x + pxSize || p.mouseY < pos.y || p.mouseY >= pos.y + pxSize)
             return null;
 
-        PVector relPos = new PVector();
-        PVector recalcPos = new PVector(pos.y, pos.x);
-        // System.out.println("pos : " + pos);
+        PVector gridPos = new PVector(pos.y, pos.x);
 
-        PVector.sub(mousePos, recalcPos, relPos);
-        // System.out.println("relPos(after) : " + relPos);
+        PVector relPos = new PVector();
+        PVector.sub(mouseGridPos, gridPos, relPos);
 
         return new PVector((int)(relPos.x / cellSize), (int)(relPos.y / cellSize));
     }
