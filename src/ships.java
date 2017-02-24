@@ -4,8 +4,8 @@ import processing.core.PVector;
 import java.util.ArrayList;
 import java.util.Random;
 
-
 class Ship {
+
     enum Type
     {
         SUBMARINE,
@@ -22,20 +22,22 @@ class Ship {
 
     final PApplet p;
 
-    static Random rand = new Random();
-
     Type type;
     PVector pos;
-    int length;
     Orientation orientation;
-    ArrayList<Cell> cells = new ArrayList<>();
+    int length;
 
+    ArrayList<Cell> cells = new ArrayList<>();
 
     Ship(PApplet p, Type type, PVector pos, Orientation orientation)
     {
+        // Setup
         this.p = p;
+        this.type = type;
+        this.pos = pos;
+        this.orientation = orientation;
 
-        switch (type)
+        switch (this.type)
         {
             case SUBMARINE:
                 length = 1; break;
@@ -47,15 +49,18 @@ class Ship {
                 length = 4; break;
         }
 
-        this.type = type;
-        this.pos = pos;
-        this.orientation = orientation;
-
-        for (PVector cellPos : getPos())
+        // Creation of cells
+        for (PVector cellPos : getPositions())
             cells.add(new Cell(p, Cell.Type.SHIP_BLOCK, cellPos));
     }
 
-    ArrayList<PVector> getPos()
+    ArrayList<Cell> getCells()
+    {
+        return cells;
+    }
+
+    // Returns occupied positions
+    ArrayList<PVector> getPositions()
     {
         ArrayList<PVector> list = new ArrayList<>();
 
@@ -70,34 +75,19 @@ class Ship {
         return list;
     }
 
-    ArrayList<Cell> getCells()
-    {
-        return cells;
-    }
-
-    ArrayList<PVector> getNeighboursPos()
+    // Returns an array of all validation positions(possible or not)
+    ArrayList<PVector> getValidationArea()
     {
         ArrayList<PVector> list = new ArrayList<>();
 
-        if (orientation == Orientation.V)
-        {
-            for (int i = (int) pos.x-1; i < pos.x+1 + length; i++)
-                for (int j = (int) (pos.y - 1); j <= pos.y + 1; j++) {
-                    if (i == pos.x && j == pos.y)
-                        continue;
-                    list.add(new PVector(i, j));
-                }
-        }
+        int start_i = (int) pos.x-1;
+        int end_i = (int) ((orientation == Orientation.V) ? pos.x+length : pos.x+1);
+        int start_j = (int) pos.y-1;
+        int end_j = (int) ((orientation == Orientation.V) ? pos.y+1 : pos.y+length);
 
-        else if (orientation == Orientation.H)
-        {
-            for (int j = (int) pos.y-1; j < pos.y+1 + length; j++)
-                for (int i = (int) (pos.x - 1); i <= pos.x + 1; i++) {
-                    if (i == pos.x && j == pos.y)
-                        continue;
-                    list.add(new PVector(i, j));
-                }
-        }
+        for (int i = start_i; i <= end_i; i++)
+            for (int j = start_j; j <= end_j; j++)
+                list.add(new PVector(i, j));
 
         return list;
     }

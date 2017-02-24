@@ -12,28 +12,29 @@ public class GridEnemy extends Grid {
         this.localDebug = localDebug;
     }
 
-    boolean hit(PVector pos)
+    void hit(PVector gridPos)
     {
-        Cell hitCell = grid[(int) pos.x][(int) pos.y];
-        if (localDebug.hit(pos))
-        {
+        Cell hitCell = grid[(int) gridPos.x][(int) gridPos.y];
+
+        if (!(hitCell.type == Cell.Type.SHIP_BLOCK || hitCell.type == Cell.Type.UNDISCOVERED))
+            return;
+
+        if (localDebug.hit(gridPos))
             hitCell.type = Cell.Type.SHIP_BLOCK_HIT;
-            return true;
-        }
         else
-        {
-            // Blank cell
             hitCell.type = Cell.Type.EMPTY_BLOCK_HIT;
-            return false;
-        }
+
     }
 
     void mousePressed()
     {
-        PVector mousePos;
-        if (p.mouseButton == PConstants.LEFT && (mousePos = getMouseGridPos()) != null)
+        PVector mouseGridPos;
+        if (p.mouseButton == PConstants.LEFT && (mouseGridPos = getMouseGridPos()) != null)
         {
-            hit(mousePos);
+            if (!localDebug.ready)
+                return;
+
+            hit(mouseGridPos);
         }
     }
 }

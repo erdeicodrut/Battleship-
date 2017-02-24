@@ -45,6 +45,6 @@ public class battleship extends PApplet {
     public void keyPressed()
     {
         if (key == ' ')
-            local.freeze();
+            local.beReady();
     }
 }
