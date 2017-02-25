@@ -25,6 +25,17 @@ public class Grid {
         clearGrid();
     }
 
+    Cell get(PVector gridPos)
+    {
+        return grid[(int) gridPos.x][(int) gridPos.y];
+    }
+
+    Cell set(PVector gridPos, Cell cell)
+    {
+        grid[(int) gridPos.x][(int) gridPos.y] = cell;
+        return get(gridPos);
+    }
+
     void clearGrid()
     {
         for (int i = 0; i < m; i++)
@@ -77,10 +88,9 @@ public class Grid {
             case SHIP_BLOCK_HIT:
                 color = 0xFF0000; break;
             case EMPTY_BLOCK_HIT:
-                color = 0xFFFFFF;
+                color = 0xFFFFFF; break;
             case UNCLICKABLE:
-                // TODO: Implement visual representation of remaining cells
-                break;
+                color = 0xFFFFFF; break;
         }
 
         int r = (color & 0xFF0000) >> 16;

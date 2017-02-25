@@ -49,7 +49,7 @@ public class GridLocal extends Grid {
             addCell(cell);
 
         // Debugging
-        printGrid();
+        // printGrid();
     }
 
     void removeShip(Ship ship)
@@ -61,14 +61,14 @@ public class GridLocal extends Grid {
             addCell(new Cell(p, Cell.Type.UNDISCOVERED, new PVector(cell.gridPos.x, cell.gridPos.y)));
 
         // Debugging
-        printGrid();
+        // printGrid();
     }
 
     Ship getShipAt(PVector targetPos)
     {
         for (Ship ship : ships)
-            for (PVector shipPos : ship.getPositions())
-                if (targetPos.x == shipPos.x && targetPos.y == shipPos.y)
+            for (PVector bodyPos : ship.getBody())
+                if (targetPos.x == bodyPos.x && targetPos.y == bodyPos.y)
                     return ship;
         return null;
     }
@@ -76,7 +76,7 @@ public class GridLocal extends Grid {
     boolean validShip(Ship ship)
     {
         // The ship must be at least on the grid
-        for (PVector bodyPos : ship.getPositions())
+        for (PVector bodyPos : ship.getBody())
             if (!validPos(bodyPos))
                 return false;
 
@@ -102,21 +102,63 @@ public class GridLocal extends Grid {
         ready = true;
     }
 
-    boolean hit(PVector gridPos)
+    NetworkPacket hit(PVector gridPos)
     {
         Cell hitCell = grid[(int) gridPos.x][(int) gridPos.y];
 
         if (hitCell.type == Cell.Type.SHIP_BLOCK)
         {
             hitCell.type = Cell.Type.SHIP_BLOCK_HIT;
-            return true;
+
+            // Flag corners as unclickable
+            for (PVector cornerPos : hitCell.getCorners())
+                if (validPos(cornerPos))
+                {
+                    Cell cell = get(cornerPos);
+                    cell.type = Cell.Type.UNCLICKABLE;
+                    set(cornerPos, cell);
+                }
+
+            Ship hitShip = getShipAt(hitCell.gridPos);
+            if (shipCompletelyHit(hitShip))
+            {
+                // Surround ship with unclickable cells
+                for (PVector neighbour : hitShip.getNeighbours())
+                    if (validPos(neighbour))
+                    {
+                        Cell cell = get(neighbour);
+                        cell.type = Cell.Type.UNCLICKABLE;
+                        set(neighbour, cell);
+                    }
+
+                return new NetworkPacket(hitShip.getBody(), true);
+            }
+
+            else
+            {
+                // Return that single cell's position
+                ArrayList<PVector> pos = new ArrayList<>();
+                pos.add(hitCell.gridPos);
+                return new NetworkPacket(pos, false);
+            }
         }
         else
         {
             // Blank cell
             hitCell.type = Cell.Type.EMPTY_BLOCK_HIT;
-            return false;
+            return new NetworkPacket();
         }
+    }
+
+    boolean shipCompletelyHit(Ship ship) {
+        boolean completelyHit = true;
+        for (Cell cell : ship.getCells())
+            if (cell.type != Cell.Type.SHIP_BLOCK_HIT)
+            {
+                completelyHit = false;
+                break;
+            }
+        return completelyHit;
     }
 
     //
@@ -134,7 +176,7 @@ public class GridLocal extends Grid {
             if (beginDragPos == null)
                 return;
 
-            System.out.println(beginDragPos);
+            // System.out.println(beginDragPos);
 
             draggedShip = getShipAt(beginDragPos);
         }
@@ -168,7 +210,7 @@ public class GridLocal extends Grid {
             if (validShip(destShip))
             {
                 draggedShip = destShip;
-                System.out.println("VALID");
+                // System.out.println("VALID");
                 beginDragPos.set(currentMousePos.x, currentMousePos.y);
             }
 
