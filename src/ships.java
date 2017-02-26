@@ -2,7 +2,6 @@ import processing.core.PApplet;
 import processing.core.PVector;
 
 import java.util.ArrayList;
-import java.util.Random;
 
 class Ship {
 
@@ -50,7 +49,7 @@ class Ship {
         }
 
         // Creation of cells
-        for (PVector cellPos : getPositions())
+        for (PVector cellPos : getBody())
             cells.add(new Cell(p, Cell.Type.SHIP_BLOCK, cellPos));
     }
 
@@ -60,7 +59,7 @@ class Ship {
     }
 
     // Returns occupied positions
-    ArrayList<PVector> getPositions()
+    ArrayList<PVector> getBody()
     {
         ArrayList<PVector> list = new ArrayList<>();
 
@@ -90,5 +89,15 @@ class Ship {
                 list.add(new PVector(i, j));
 
         return list;
+    }
+
+    // getNeighbours = getValidationArea - getBody
+    ArrayList<PVector> getNeighbours()
+    {
+        ArrayList<PVector> neighbours = getValidationArea();
+        for (PVector pos : getBody())
+            neighbours.remove(pos);
+
+        return neighbours;
     }
 }
