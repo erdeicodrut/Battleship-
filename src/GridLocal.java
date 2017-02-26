@@ -8,16 +8,19 @@ public class GridLocal extends Grid {
 
     ArrayList<Ship> ships = new ArrayList<>();
 
+    // Helper vars for managing ship dragging
     PVector beginDragPos = new PVector();
     PVector endDragPos = new PVector();
     Ship draggedShip;
 
+    // If the player finished placing the ships
     boolean ready = false;
 
     GridLocal(PApplet p, PVector pos, float size)
     {
         super(p, pos, size);
 
+        // Ship placing
         int numberToSpawn = 4;
 
         for (Ship.Type type : Ship.Type.values())
@@ -41,12 +44,18 @@ public class GridLocal extends Grid {
         }
     }
 
+    // Finished placing the ships
+    void beReady()
+    {
+        ready = true;
+    }
+
     void addShip(Ship ship)
     {
         ships.add(ship);
 
         for (Cell cell : ship.getCells())
-            addCell(cell);
+            setCell(cell);
 
         // Debugging
         // printGrid();
@@ -58,12 +67,13 @@ public class GridLocal extends Grid {
 
         for (Cell cell : ship.getCells())
             // Clone the position but change the type
-            addCell(new Cell(p, Cell.Type.UNDISCOVERED, new PVector(cell.gridPos.x, cell.gridPos.y)));
+            setCell(new Cell(p, Cell.Type.UNDISCOVERED, new PVector(cell.gridPos.x, cell.gridPos.y)));
 
         // Debugging
         // printGrid();
     }
 
+    // Returns the ship found at a given position / null instead
     Ship getShipAt(PVector targetPos)
     {
         for (Ship ship : ships)
@@ -73,9 +83,9 @@ public class GridLocal extends Grid {
         return null;
     }
 
+    // The ship must be at least on the grid and the existing neighbours must be also valid (no nearby ship)
     boolean validShip(Ship ship)
     {
-        // The ship must be at least on the grid
         for (PVector bodyPos : ship.getBody())
             if (!validPos(bodyPos))
                 return false;
@@ -88,81 +98,85 @@ public class GridLocal extends Grid {
         return true;
     }
 
+    // Refresh the entire grid in case something goes wrong
+    // Do not use unless you're Coddy *shots fired*
     void updateGrid()
     {
         clearGrid();
 
         for (Ship ship : ships)
             for (Cell cell : ship.getCells())
-                addCell(cell);
+                setCell(cell);
     }
 
-    void beReady()
-    {
-        ready = true;
-    }
-
+    // Receive, handle and give feedback to the opponent
     NetworkPacket hit(PVector gridPos)
     {
         Cell hitCell = grid[(int) gridPos.x][(int) gridPos.y];
 
+        // If it's a ship
         if (hitCell.type == Cell.Type.SHIP_BLOCK)
         {
+            // Hit it
             hitCell.type = Cell.Type.SHIP_BLOCK_HIT;
 
-            // Flag corners as unclickable
-            for (PVector cornerPos : hitCell.getCorners())
-                if (validPos(cornerPos))
-                {
-                    Cell cell = get(cornerPos);
-                    cell.type = Cell.Type.UNCLICKABLE;
-                    set(cornerPos, cell);
-                }
-
+            // If the entire ship is destroyed, surround it with unclickable cells
             Ship hitShip = getShipAt(hitCell.gridPos);
-            if (shipCompletelyHit(hitShip))
+            if (shipDestroyed(hitShip))
             {
-                // Surround ship with unclickable cells
-                for (PVector neighbour : hitShip.getNeighbours())
-                    if (validPos(neighbour))
+                for (PVector neighbourPos : hitShip.getNeighbours())
+                    if (validPos(neighbourPos))
                     {
-                        Cell cell = get(neighbour);
-                        cell.type = Cell.Type.UNCLICKABLE;
-                        set(neighbour, cell);
+                        Cell neighbour = getCell(neighbourPos);
+                        neighbour.type = Cell.Type.UNCLICKABLE;
+                        setCell(neighbour);
                     }
 
                 return new NetworkPacket(hitShip.getBody(), true);
             }
 
+            // We didn't destroy the entire ship
             else
             {
+                // Flag corners as unclickable
+                for (PVector cornerPos : hitCell.getCorners())
+                    if (validPos(cornerPos))
+                    {
+                        Cell corner = getCell(cornerPos);
+                        corner.type = Cell.Type.UNCLICKABLE;
+                        setCell(corner);
+                    }
+
                 // Return that single cell's position
                 ArrayList<PVector> pos = new ArrayList<>();
                 pos.add(hitCell.gridPos);
                 return new NetworkPacket(pos, false);
             }
         }
+
+        // It's a blank cell
         else
         {
-            // Blank cell
             hitCell.type = Cell.Type.EMPTY_BLOCK_HIT;
             return new NetworkPacket();
         }
     }
 
-    boolean shipCompletelyHit(Ship ship) {
-        boolean completelyHit = true;
+    // If every cell of the ship is hit
+    boolean shipDestroyed(Ship ship) {
+        boolean destroyed = true;
         for (Cell cell : ship.getCells())
             if (cell.type != Cell.Type.SHIP_BLOCK_HIT)
             {
-                completelyHit = false;
+                destroyed = false;
                 break;
             }
-        return completelyHit;
+        return destroyed;
     }
 
     //
-    // Handling mouse events
+    // Handling mouse events (drag)
+    // (block any event if the *player* hasn't finished placing the ships (not ready))
     //
 
     void mousePressed()
@@ -175,8 +189,6 @@ public class GridLocal extends Grid {
             beginDragPos = getMouseGridPos();
             if (beginDragPos == null)
                 return;
-
-            // System.out.println(beginDragPos);
 
             draggedShip = getShipAt(beginDragPos);
         }
@@ -210,7 +222,6 @@ public class GridLocal extends Grid {
             if (validShip(destShip))
             {
                 draggedShip = destShip;
-                // System.out.println("VALID");
                 beginDragPos.set(currentMousePos.x, currentMousePos.y);
             }
 

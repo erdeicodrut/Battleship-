@@ -8,12 +8,17 @@ public class Grid {
     final PApplet p;
     static Random rand = new Random();
 
+    // Absolute position of the grid
     final PVector pos;
+
     final int m = 10;
     final int n = 10;
     Cell[][] grid = new Cell[m][n];
 
+    // Size of the grid in pixels
     final float pxSize;
+
+    // Size of a cell also in pixels
     final float cellSize;
 
     public Grid(PApplet p, PVector pos, float pxSize) {
@@ -25,17 +30,20 @@ public class Grid {
         clearGrid();
     }
 
-    Cell get(PVector gridPos)
+    // Return the cell in the given position
+    Cell getCell(PVector gridPos)
     {
         return grid[(int) gridPos.x][(int) gridPos.y];
     }
 
-    Cell set(PVector gridPos, Cell cell)
+    // Replace a cell in a given position with another one
+    Cell setCell(Cell cell)
     {
-        grid[(int) gridPos.x][(int) gridPos.y] = cell;
-        return get(gridPos);
+        grid[(int) cell.gridPos.x][(int) cell.gridPos.y] = cell;
+        return getCell(cell.gridPos);
     }
 
+    // Set all the cells to blank(undiscovered)
     void clearGrid()
     {
         for (int i = 0; i < m; i++)
@@ -43,6 +51,7 @@ public class Grid {
                 grid[i][j] = new Cell(p, Cell.Type.UNDISCOVERED, new PVector(i, j));
     }
 
+    // If the given position(i, j) is in the grid
     boolean validPos(PVector pos)
     {
         if (pos.x >= 0 && pos.x < m && pos.y >= 0 && pos.y < n)
@@ -50,11 +59,7 @@ public class Grid {
         return false;
     }
 
-    void addCell(Cell cell)
-    {
-        grid[(int) cell.gridPos.x][(int) cell.gridPos.y] = cell;
-    }
-
+    // For the sake of debugging
     void printGrid()
     {
         System.out.println("---------------------");
@@ -68,6 +73,7 @@ public class Grid {
         System.out.println("---------------------");
     }
 
+    // Show all the cells
     void show()
     {
         p.strokeWeight(5);
@@ -76,6 +82,7 @@ public class Grid {
                 showCell(grid[i][j]);
     }
 
+    // Show a single cell
     void showCell(Cell cell)
     {
         int color = 0;
@@ -101,7 +108,7 @@ public class Grid {
         p.rect(pos.x + cell.gridPos.y * cellSize, pos.y + cell.gridPos.x * cellSize, cellSize, cellSize);
     }
 
-    // Returns null if not clicked on the grid
+    // Returns the grid position(i, j) or null if the user didn't click on the grid
     PVector getMouseGridPos()
     {
         PVector mouseGridPos = new PVector(p.mouseY, p.mouseX);

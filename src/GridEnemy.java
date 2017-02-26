@@ -6,6 +6,7 @@ import java.util.ArrayList;
 
 public class GridEnemy extends Grid {
 
+    // Testing locally for now
     GridLocal localDebug;
 
     GridEnemy(PApplet p, PVector pos, float size, GridLocal localDebug)
@@ -14,53 +15,64 @@ public class GridEnemy extends Grid {
         this.localDebug = localDebug;
     }
 
+    // Ask the opponent, receive the feedback and handle
     void hit(PVector gridPos)
     {
-        Cell hitCell = get(gridPos);
+        // Get respective cell
+        Cell hitCell = getCell(gridPos);
 
+        // Stop if the cell is already evaluated(other than ship block or undiscovered)
         if (!(hitCell.type == Cell.Type.SHIP_BLOCK || hitCell.type == Cell.Type.UNDISCOVERED))
             return;
 
-        // Is ship block or undiscovered block
+        // Get information from the opponent
         NetworkPacket packet = localDebug.hit(gridPos);
-        // System.out.println(hitCells);
 
-        if (packet.hitAShip == false)
+        // If we hit a ship
+        if (packet.hitAShip)
+        {
+            // Hit it
+            hitCell.type = Cell.Type.SHIP_BLOCK_HIT;
+
+            // If the entire ship is destroyed, surround it with unclickable cells
+            if (packet.shipDestroyed)
+            {
+                ArrayList<PVector> hitCells = packet.coords;
+
+                for (PVector cellPos : hitCells)
+                    for (PVector neighbourPos : getCell(cellPos).getNeighbours())
+                        if (validPos(neighbourPos))
+                            if (getCell(neighbourPos).type != Cell.Type.SHIP_BLOCK_HIT)
+                            {
+                                Cell neighbour = getCell(neighbourPos);
+                                neighbour.type = Cell.Type.UNCLICKABLE;
+                                setCell(neighbour);
+                            }
+            }
+
+            // We didn't destroy the entire ship
+            else
+            {
+                // Flag corners as unclickable
+                for (PVector cornerPos : hitCell.getCorners())
+                    if (validPos(cornerPos))
+                    {
+                        Cell corner = getCell(cornerPos);
+                        corner.type = Cell.Type.UNCLICKABLE;
+                        setCell(corner);
+                    }
+            }
+        }
+
+        // We hit an empty block
+        else
             hitCell.type = Cell.Type.EMPTY_BLOCK_HIT;
-
-        else if (packet.completelyHit == false)
-        {
-            hitCell.type = Cell.Type.SHIP_BLOCK_HIT;
-
-            // Flag corners as unclickable
-            // System.out.println(hitCell.getCorners());
-
-            for (PVector cornerPos : hitCell.getCorners())
-                if (validPos(cornerPos))
-                {
-                    Cell cell = get(cornerPos);
-                    cell.type = Cell.Type.UNCLICKABLE;
-                    set(cornerPos, cell);
-                }
-        }
-
-        else if (packet.completelyHit)
-        {
-            hitCell.type = Cell.Type.SHIP_BLOCK_HIT;
-
-            ArrayList<PVector> hitCells = packet.coords;
-
-            for (PVector cellPos : hitCells)
-                for (PVector neighbour : get(cellPos).getNeighbours())
-                    if (validPos(neighbour))
-                        if (get(neighbour).type != Cell.Type.SHIP_BLOCK_HIT)
-                        {
-                            Cell cell = get(neighbour);
-                            cell.type = Cell.Type.UNCLICKABLE;
-                            set(neighbour, cell);
-                        }
-        }
     }
+
+    //
+    // Handling mouse events (hit)
+    // (block any event if the *opponent* hasn't finished placing the ships (not ready))
+    //
 
     void mousePressed()
     {

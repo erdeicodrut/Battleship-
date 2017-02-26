@@ -26,6 +26,7 @@ public class Cell {
         this.gridPos = gridPos;
     }
 
+    // Get cell's corners (valid or not)
     ArrayList<PVector> getCorners()
     {
         ArrayList<PVector> corners = new ArrayList<>();
@@ -38,6 +39,7 @@ public class Cell {
         return corners;
     }
 
+    // Get cell's neighbours (valid or not)
     ArrayList<PVector> getNeighbours()
     {
         ArrayList<PVector> neighbours = new ArrayList<>();
