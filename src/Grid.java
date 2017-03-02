@@ -59,6 +59,37 @@ public class Grid {
         return false;
     }
 
+    // Flag the cell and the corners if a ship was hit
+    void flagHitCell(Cell cell)
+    {
+        Cell gridCell = getCell(cell.gridPos);
+
+        // Flag the cell
+        gridCell.type = Cell.Type.SHIP_BLOCK_HIT;
+
+        // Flag the corners
+        for (PVector corner : gridCell.getCorners())
+            if (validPos(corner))
+                getCell(corner).type = Cell.Type.UNCLICKABLE;
+    }
+
+    void flagEmptyCell(Cell cell)
+    {
+        getCell(cell.gridPos).type = Cell.Type.EMPTY_BLOCK_HIT;
+    }
+
+    void flagHitShip(Ship ship)
+    {
+        // Flag ship cells
+        for (PVector body : ship.getBody())
+            getCell(body).type = Cell.Type.SHIP_BLOCK_HIT;
+
+        // Flag neighbours
+        for (PVector neighbour : ship.getNeighbours())
+            if (validPos(neighbour))
+                getCell(neighbour).type = Cell.Type.UNCLICKABLE;
+    }
+
     // For the sake of debugging
     void printGrid()
     {

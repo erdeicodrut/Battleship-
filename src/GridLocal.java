@@ -109,60 +109,46 @@ public class GridLocal extends Grid {
                 setCell(cell);
     }
 
-    // Receive, handle and give feedback to the opponent
-    NetworkPacket hit(PVector gridPos)
+    // Handle, give feedback to the opponent
+    Boolean hit(PVector gridPos)
     {
-        Cell hitCell = grid[(int) gridPos.x][(int) gridPos.y];
+        boolean hitAShip = true;
 
-        // If it's a ship
-        if (hitCell.type == Cell.Type.SHIP_BLOCK)
+        Cell cell = getCell(gridPos);
+
+        // If a ship was hit
+        if (cell.type == Cell.Type.SHIP_BLOCK)
         {
-            // Hit it
-            hitCell.type = Cell.Type.SHIP_BLOCK_HIT;
+            // Flag the cell
+            flagHitCell(cell);
 
-            // If the entire ship is destroyed, surround it with unclickable cells
-            Ship hitShip = getShipAt(hitCell.gridPos);
+            // If the entire ship is destroyed
+            Ship hitShip = getShipAt(gridPos);
             if (shipDestroyed(hitShip))
             {
-                for (PVector neighbourPos : hitShip.getNeighbours())
-                    if (validPos(neighbourPos))
-                    {
-                        Cell neighbour = getCell(neighbourPos);
-                        neighbour.type = Cell.Type.UNCLICKABLE;
-                        setCell(neighbour);
-                    }
+                flagHitShip(hitShip);
 
-                return new NetworkPacket(hitShip.getBody(), true);
+                battleship.network.sendObject(hitShip);
             }
-
-            // We didn't destroy the entire ship
             else
-            {
-                // Flag corners as unclickable
-                for (PVector cornerPos : hitCell.getCorners())
-                    if (validPos(cornerPos))
-                    {
-                        Cell corner = getCell(cornerPos);
-                        corner.type = Cell.Type.UNCLICKABLE;
-                        setCell(corner);
-                    }
-
-                // Return that single cell's position
-                ArrayList<PVector> pos = new ArrayList<>();
-                pos.add(hitCell.gridPos);
-                return new NetworkPacket(pos, false);
-            }
+                // Just a cell is hit
+                battleship.network.sendObject(cell);
         }
 
-        // It's a blank cell
+        // Just an empty cell
         else
         {
-            hitCell.type = Cell.Type.EMPTY_BLOCK_HIT;
-            return new NetworkPacket();
+            flagEmptyCell(cell);
+            hitAShip = false;
+
+            battleship.network.sendObject(cell);
         }
+
+        // Switch turn ?
+        return hitAShip;
     }
 
-    // If every cell of the ship is hit
+    // If every cell of the ship is requestHit
     boolean shipDestroyed(Ship ship) {
         boolean destroyed = true;
         for (Cell cell : ship.getCells())

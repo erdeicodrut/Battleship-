@@ -1,9 +1,10 @@
 import processing.core.PApplet;
 import processing.core.PVector;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-class Ship {
+class Ship implements Serializable {
 
     enum Type
     {
@@ -19,7 +20,7 @@ class Ship {
         V
     }
 
-    final PApplet p;
+    transient final PApplet p;
 
     Type type;
     PVector pos;

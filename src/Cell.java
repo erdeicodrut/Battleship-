@@ -1,9 +1,10 @@
 import processing.core.PApplet;
 import processing.core.PVector;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 
-public class Cell {
+public class Cell implements Serializable {
 
     enum Type
     {
@@ -14,7 +15,7 @@ public class Cell {
         UNCLICKABLE
     }
 
-    final PApplet p;
+    transient final PApplet p;
 
     Type type;
     PVector gridPos;
@@ -37,18 +38,5 @@ public class Cell {
         corners.add(new PVector(gridPos.x+1, gridPos.y+1));
 
         return corners;
-    }
-
-    // Get cell's neighbours (valid or not)
-    ArrayList<PVector> getNeighbours()
-    {
-        ArrayList<PVector> neighbours = new ArrayList<>();
-
-        for (int i = (int) (gridPos.x-1); i <= gridPos.x+1; i++)
-            for (int j = (int) (gridPos.y-1); j <= gridPos.y+1; j++)
-                if (!(i == gridPos.x && j == gridPos.y))
-                    neighbours.add(new PVector(i, j));
-
-        return neighbours;
     }
 }
