@@ -4,101 +4,115 @@ import processing.core.PVector;
 import java.io.Serializable;
 import java.util.ArrayList;
 
-class Ship implements Serializable {
+class Ship implements Serializable
+{
+	transient final PApplet p;
 
-    enum Type
-    {
-        SUBMARINE,
-        DESTROYER,
-        CRUISER,
-        BATTLESHIP
-    }
+	Type type;
+	PVector pos;
+	Orientation orientation;
+	int length;
+	ArrayList<Cell> cells = new ArrayList<>();
 
-    enum Orientation
-    {
-        H,
-        V
-    }
+	enum Type
+	{
+		SUBMARINE,
+		DESTROYER,
+		CRUISER,
+		BATTLESHIP
+	}
 
-    transient final PApplet p;
+	enum Orientation
+	{
+		H, V
+	}
 
-    Type type;
-    PVector pos;
-    Orientation orientation;
-    int length;
+	Ship(PApplet p, Type type, PVector pos, Orientation orientation)
+	{
+		// Setup
+		this.p = p;
+		this.type = type;
+		this.pos = pos;
+		this.orientation = orientation;
 
-    ArrayList<Cell> cells = new ArrayList<>();
+		switch (this.type)
+		{
+			case SUBMARINE:
+				length = 1;
+				break;
+			case DESTROYER:
+				length = 2;
+				break;
+			case CRUISER:
+				length = 3;
+				break;
+			case BATTLESHIP:
+				length = 4;
+				break;
+		}
 
-    Ship(PApplet p, Type type, PVector pos, Orientation orientation)
-    {
-        // Setup
-        this.p = p;
-        this.type = type;
-        this.pos = pos;
-        this.orientation = orientation;
+		// Creation of cells
+		for (PVector cellPos : getBody())
+			cells.add(new Cell(p, Cell.Type.SHIP_BLOCK, cellPos));
+	}
 
-        switch (this.type)
-        {
-            case SUBMARINE:
-                length = 1; break;
-            case DESTROYER:
-                length = 2; break;
-            case CRUISER:
-                length = 3; break;
-            case BATTLESHIP:
-                length = 4; break;
-        }
+	boolean destroyed()
+	{
+		boolean destroyed = true;
+		for (Cell cell : getCells())
+			if (cell.type != Cell.Type.SHIP_BLOCK_HIT)
+			{
+				destroyed = false;
+				break;
+			}
+		return destroyed;
+	}
 
-        // Creation of cells
-        for (PVector cellPos : getBody())
-            cells.add(new Cell(p, Cell.Type.SHIP_BLOCK, cellPos));
-    }
+	// Returns occupied positions
+	ArrayList<PVector> getBody()
+	{
+		ArrayList<PVector> list = new ArrayList<>();
 
-    ArrayList<Cell> getCells()
-    {
-        return cells;
-    }
+		if (orientation == Orientation.V)
+			for (int i = (int) pos.x; i < pos.x + length; i++)
+				list.add(new PVector(i, pos.y));
 
-    // Returns occupied positions
-    ArrayList<PVector> getBody()
-    {
-        ArrayList<PVector> list = new ArrayList<>();
+		else if (orientation == Orientation.H)
+			for (int j = (int) pos.y; j < pos.y + length; j++)
+				list.add(new PVector(pos.x, j));
 
-        if (orientation == Orientation.V)
-            for (int i = (int) pos.x; i < pos.x + length; i++)
-                list.add(new PVector(i, pos.y));
+		return list;
+	}
 
-        else if (orientation == Orientation.H)
-            for (int j = (int) pos.y; j < pos.y + length; j++)
-                list.add(new PVector(pos.x, j));
+	ArrayList<Cell> getCells()
+	{
+		return cells;
+	}
 
-        return list;
-    }
+	// getNeighbours = getValidationArea - getBody
+	ArrayList<PVector> getNeighbours()
+	{
+		ArrayList<PVector> neighbours = getValidationArea();
+		for (PVector pos : getBody())
+			neighbours.remove(pos);
 
-    // Returns an array of all validation positions(possible or not)
-    ArrayList<PVector> getValidationArea()
-    {
-        ArrayList<PVector> list = new ArrayList<>();
+		return neighbours;
+	}
 
-        int start_i = (int) pos.x-1;
-        int end_i = (int) ((orientation == Orientation.V) ? pos.x+length : pos.x+1);
-        int start_j = (int) pos.y-1;
-        int end_j = (int) ((orientation == Orientation.V) ? pos.y+1 : pos.y+length);
+	// Returns an array of all validation positions(possible or not)
+	ArrayList<PVector> getValidationArea()
+	{
+		ArrayList<PVector> list = new ArrayList<>();
 
-        for (int i = start_i; i <= end_i; i++)
-            for (int j = start_j; j <= end_j; j++)
-                list.add(new PVector(i, j));
+		int start_i = (int) pos.x - 1;
+		int end_i = (int) ((orientation == Orientation.V) ? pos.x + length : pos.x + 1);
+		int start_j = (int) pos.y - 1;
+		int end_j = (int) ((orientation == Orientation.V) ? pos.y + 1 : pos.y + length);
 
-        return list;
-    }
+		for (int i = start_i; i <= end_i; i++)
+			for (int j = start_j; j <= end_j; j++)
+				list.add(new PVector(i, j));
 
-    // getNeighbours = getValidationArea - getBody
-    ArrayList<PVector> getNeighbours()
-    {
-        ArrayList<PVector> neighbours = getValidationArea();
-        for (PVector pos : getBody())
-            neighbours.remove(pos);
-
-        return neighbours;
-    }
+		return list;
+	}
 }

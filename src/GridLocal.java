@@ -4,222 +4,188 @@ import processing.core.PVector;
 
 import java.util.ArrayList;
 
-public class GridLocal extends Grid {
+public class GridLocal extends Grid
+{
+	ArrayList<Ship> ships = new ArrayList<>();
 
-    ArrayList<Ship> ships = new ArrayList<>();
+	// Helper vars for managing ship dragging
+	PVector beginDragPos = new PVector();
+	PVector endDragPos = new PVector();
+	Ship draggedShip;
 
-    // Helper vars for managing ship dragging
-    PVector beginDragPos = new PVector();
-    PVector endDragPos = new PVector();
-    Ship draggedShip;
+	GridLocal(PApplet p, PVector pos, float size)
+	{
+		super(p, pos, size);
 
-    // If the player finished placing the ships
-    boolean ready = false;
+		// Ship placing
+		int numberToSpawn = 4;
 
-    GridLocal(PApplet p, PVector pos, float size)
-    {
-        super(p, pos, size);
+		for (Ship.Type type : Ship.Type.values())
+		{
+			for (int i = 0; i < numberToSpawn; i++)
+			{
+				Ship ship;
+				do
+				{
+					PVector newPos = new PVector(rand.nextInt(m), rand.nextInt(n));
+					Ship.Orientation newOrientation = rand.nextBoolean() ? Ship.Orientation.H : Ship.Orientation.V;
 
-        // Ship placing
-        int numberToSpawn = 4;
+					ship = new Ship(p, type, newPos, newOrientation);
+				}
+				while (!validShip(ship));
 
-        for (Ship.Type type : Ship.Type.values())
-        {
-            for (int i = 0; i < numberToSpawn; i++)
-            {
-                Ship ship;
-                do {
-                    PVector newPos = new PVector(rand.nextInt(m), rand.nextInt(n));
-                    Ship.Orientation newOrientation = rand.nextBoolean() ? Ship.Orientation.H : Ship.Orientation.V;
+				addShip(ship);
+				// updateGrid();
+			}
 
-                    ship = new Ship(p, type, newPos, newOrientation);
-                }
-                while (!validShip(ship));
+			numberToSpawn--;
+		}
+	}
 
-                addShip(ship);
-                // updateGrid();
-            }
+	// Refresh the entire grid in case something goes wrong
+	// Do not use unless you're Coddy *shots fired*
+	void updateGrid()
+	{
+		clearGrid();
 
-            numberToSpawn--;
-        }
-    }
+		for (Ship ship : ships)
+			for (Cell cell : ship.getCells())
+				setCell(cell);
+	}
 
-    // Finished placing the ships
-    void beReady()
-    {
-        ready = true;
-    }
+	// The ship must be at least on the grid and the existing neighbours must be also valid (no nearby ship)
+	boolean validShip(Ship ship)
+	{
+		for (PVector bodyPos : ship.getBody())
+			if (!validPos(bodyPos))
+				return false;
 
-    void addShip(Ship ship)
-    {
-        ships.add(ship);
+		for (PVector pos : ship.getValidationArea())
+			if (validPos(pos))
+				if (grid[(int) pos.x][(int) pos.y].type == Cell.Type.SHIP_BLOCK)
+					return false;
 
-        for (Cell cell : ship.getCells())
-            setCell(cell);
+		return true;
+	}
 
-        // Debugging
-        // printGrid();
-    }
+	void addShip(Ship ship)
+	{
+		ships.add(ship);
 
-    void removeShip(Ship ship)
-    {
-        ships.remove(ship);
+		for (Cell cell : ship.getCells())
+			setCell(cell);
 
-        for (Cell cell : ship.getCells())
-            // Clone the position but change the type
-            setCell(new Cell(p, Cell.Type.UNDISCOVERED, new PVector(cell.gridPos.x, cell.gridPos.y)));
+		// Debugging
+		// printGrid();
+	}
 
-        // Debugging
-        // printGrid();
-    }
+	void removeShip(Ship ship)
+	{
+		ships.remove(ship);
 
-    // Returns the ship found at a given position / null instead
-    Ship getShipAt(PVector targetPos)
-    {
-        for (Ship ship : ships)
-            for (PVector bodyPos : ship.getBody())
-                if (targetPos.x == bodyPos.x && targetPos.y == bodyPos.y)
-                    return ship;
-        return null;
-    }
+		for (Cell cell : ship.getCells())
+			// Clone the position but change the type
+			setCell(new Cell(p, Cell.Type.UNDISCOVERED, new PVector(cell.gridPos.x, cell.gridPos.y)));
 
-    // The ship must be at least on the grid and the existing neighbours must be also valid (no nearby ship)
-    boolean validShip(Ship ship)
-    {
-        for (PVector bodyPos : ship.getBody())
-            if (!validPos(bodyPos))
-                return false;
+		// Debugging
+		// printGrid();
+	}
 
-        for (PVector pos : ship.getValidationArea())
-            if (validPos(pos))
-                if (grid[(int) pos.x][(int) pos.y].type == Cell.Type.SHIP_BLOCK)
-                    return false;
+	// Handle, give feedback to the opponent
+	Boolean hit(PVector gridPos)
+	{
+		boolean hitAShip = true;
 
-        return true;
-    }
+		Cell cell = getCell(gridPos);
 
-    // Refresh the entire grid in case something goes wrong
-    // Do not use unless you're Coddy *shots fired*
-    void updateGrid()
-    {
-        clearGrid();
+		// If a ship was hit
+		if (cell.type == Cell.Type.SHIP_BLOCK)
+		{
+			// Flag the cell
+			flagHitCell(cell);
 
-        for (Ship ship : ships)
-            for (Cell cell : ship.getCells())
-                setCell(cell);
-    }
+			// If the entire ship is destroyed
+			Ship hitShip = getShipAt(gridPos);
+			if (hitShip.destroyed())
+			{
+				flagHitShip(hitShip);
 
-    // Handle, give feedback to the opponent
-    Boolean hit(PVector gridPos)
-    {
-        boolean hitAShip = true;
+				battleship.network.sendObject(hitShip);
+			}
+			else
+				// Just a cell is hit
+				battleship.network.sendObject(cell);
+		}
 
-        Cell cell = getCell(gridPos);
+		// Just an empty cell
+		else
+		{
+			flagEmptyCell(cell);
+			hitAShip = false;
 
-        // If a ship was hit
-        if (cell.type == Cell.Type.SHIP_BLOCK)
-        {
-            // Flag the cell
-            flagHitCell(cell);
+			battleship.network.sendObject(cell);
+		}
 
-            // If the entire ship is destroyed
-            Ship hitShip = getShipAt(gridPos);
-            if (shipDestroyed(hitShip))
-            {
-                flagHitShip(hitShip);
+		// Switch turn ?
+		return hitAShip;
+	}
 
-                battleship.network.sendObject(hitShip);
-            }
-            else
-                // Just a cell is hit
-                battleship.network.sendObject(cell);
-        }
+	// Returns the ship found at a given position / null instead
+	Ship getShipAt(PVector targetPos)
+	{
+		for (Ship ship : ships)
+			for (PVector bodyPos : ship.getBody())
+				if (targetPos.x == bodyPos.x && targetPos.y == bodyPos.y)
+					return ship;
+		return null;
+	}
 
-        // Just an empty cell
-        else
-        {
-            flagEmptyCell(cell);
-            hitAShip = false;
+	void mousePressed()
+	{
+		if (p.mouseButton == PConstants.LEFT)
+		{
+			beginDragPos = getMouseGridPos();
+			if (beginDragPos == null)
+				return;
 
-            battleship.network.sendObject(cell);
-        }
+			draggedShip = getShipAt(beginDragPos);
+		}
+	}
 
-        // Switch turn ?
-        return hitAShip;
-    }
+	void mouseDragged()
+	{
+		if (draggedShip != null)
+		{
+			PVector currentMousePos = getMouseGridPos();
+			if (currentMousePos == null)
+				return;
 
-    // If every cell of the ship is requestHit
-    boolean shipDestroyed(Ship ship) {
-        boolean destroyed = true;
-        for (Cell cell : ship.getCells())
-            if (cell.type != Cell.Type.SHIP_BLOCK_HIT)
-            {
-                destroyed = false;
-                break;
-            }
-        return destroyed;
-    }
+			PVector dragVector = new PVector();
+			PVector.sub(currentMousePos, beginDragPos, dragVector);
 
-    //
-    // Handling mouse events (drag)
-    // (block any event if the *player* hasn't finished placing the ships (not ready))
-    //
+			endDragPos = new PVector();
+			PVector.add(draggedShip.pos, dragVector, endDragPos);
 
-    void mousePressed()
-    {
-        if (ready)
-            return;
-
-        if (p.mouseButton == PConstants.LEFT)
-        {
-            beginDragPos = getMouseGridPos();
-            if (beginDragPos == null)
-                return;
-
-            draggedShip = getShipAt(beginDragPos);
-        }
-    }
-
-    void mouseDragged()
-    {
-        if (ready)
-            return;
-
-        if (draggedShip != null)
-        {
-            PVector currentMousePos = getMouseGridPos();
-            if (currentMousePos == null)
-                return;
-
-            PVector dragVector = new PVector();
-            PVector.sub(currentMousePos, beginDragPos, dragVector);
-
-            endDragPos = new PVector();
-            PVector.add(draggedShip.pos, dragVector, endDragPos);
-
-            // Small bug on dragging 2 length vertical ship downwards
+			// Small bug on dragging 2 length vertical ship downwards
 //            if (beginDragPos.x == endDragPos.x && beginDragPos.y == endDragPos.y)
 //                return;
 
-            Ship destShip = new Ship(p, draggedShip.type, endDragPos, draggedShip.orientation);
+			Ship destShip = new Ship(p, draggedShip.type, endDragPos, draggedShip.orientation);
 
-            removeShip(draggedShip);
+			removeShip(draggedShip);
 
-            if (validShip(destShip))
-            {
-                draggedShip = destShip;
-                beginDragPos.set(currentMousePos.x, currentMousePos.y);
-            }
+			if (validShip(destShip))
+			{
+				draggedShip = destShip;
+				beginDragPos.set(currentMousePos.x, currentMousePos.y);
+			}
 
-            addShip(draggedShip);
-        }
-    }
+			addShip(draggedShip);
+		}
+	}
 
-    void mouseReleased()
-    {
-        if (ready)
-            return;
-
-        draggedShip = null;
-    }
+	void mouseReleased()
+	{
+		draggedShip = null;
+	}
 }
