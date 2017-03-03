@@ -12,6 +12,6 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="core" level="project" />
     <orderEntry type="library" name="net" level="project" />
-    <orderEntry type="library" name="P2P_library" level="project" />
+    <orderEntry type="library" name="P2P-library" level="project" />
   </component>
 </module>

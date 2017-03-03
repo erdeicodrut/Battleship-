@@ -8,7 +8,7 @@ public class battleship extends PApplet
 
 	public void settings()
 	{
-		size(1000, 500);
+		size(1050, 500);
 	}
 
 	public void setup()
