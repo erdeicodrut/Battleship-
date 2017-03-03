@@ -54,7 +54,7 @@ public class battleship extends PApplet
 		// Create client
 		else if (key == 'c')
 		{
-			network = new Connection(this, "192.168.1.3", 12345);
+			network = new Connection(this, "87.66.32.58", 12345);
 			currentGame = new Game(this, false);
 		}
 		// Game related
