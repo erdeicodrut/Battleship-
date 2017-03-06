@@ -1,50 +1,64 @@
+import P2P.Connection;
 import processing.core.PApplet;
-import processing.core.PVector;
 
-public class battleship extends PApplet {
+public class battleship extends PApplet
+{
+	static Connection network;
+	static Game currentGame;
 
-    GridLocal local;
-    GridEnemy enemy;
+	public void settings()
+	{
+		size(1050, 500);
+	}
 
-    public void settings()
-    {
-        size(1600, 800);
-    }
+	public void setup()
+	{
 
-    public void setup()
-    {
-        local = new GridLocal(this, new PVector(0, 0), height);
-        enemy = new GridEnemy(this, new PVector(width/2, 0), height, local);
+	}
 
-        local.printGrid();
-    }
+	public void draw()
+	{
+		if (currentGame == null)
+			return;
 
-    public void draw()
-    {
-        background(220);
-        local.show();
-        enemy.show();
-    }
+		for (Object obj : network.receiveObjects())
+			currentGame.parse(obj);
 
-    public void mousePressed()
-    {
-        local.mousePressed();
-        enemy.mousePressed();
-    }
+		background(220);
+		currentGame.show();
+	}
 
-    public void mouseDragged()
-    {
-        local.mouseDragged();
-    }
+	public void mousePressed()
+	{
+		currentGame.handleEvent(InputEvent.MOUSE_PRESSED);
+	}
 
-    public void mouseReleased()
-    {
-        local.mouseReleased();
-    }
+	public void mouseReleased()
+	{
+		currentGame.handleEvent(InputEvent.MOUSE_RELEASED);
+	}
 
-    public void keyPressed()
-    {
-        if (key == ' ')
-            local.beReady();
-    }
+	public void mouseDragged()
+	{
+		currentGame.handleEvent(InputEvent.MOUSE_DRAGGED);
+	}
+
+	public void keyPressed()
+	{
+		// Create server
+		if (key == 's')
+		{
+			network = new Connection(this, 12345);
+			currentGame = new Game(this, true);
+		}
+		// Create client
+		else if (key == 'c')
+		{
+			network = new Connection(this, "87.66.32.58", 12345);
+			currentGame = new Game(this, false);
+		}
+		// Game related
+		else if (key == ' ')
+			currentGame.handleEvent(InputEvent.KEY_PRESSED);
+	}
 }

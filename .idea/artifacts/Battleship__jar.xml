@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Battleship-:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Battleship__jar</output-path>
+    <root id="archive" name="Battleship-.jar">
+      <element id="module-output" name="Battleship-" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/core.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/net.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/lib/P2P-library.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
